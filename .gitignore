@@ -1,0 +1,5 @@
+agent/.env
+__pycache__
+
+data/vector_db
+*.log
