@@ -68,8 +68,14 @@ def filter_by_cumulative_budget(employee_id: str, candidate_courses: list[str], 
 
 # for handling cases where policy is relevant to the question(New Feature)
 def is_policy_question(question: str) -> bool:
-    """Detects if question asks about company rules, approvals, or degree sponsorship."""
+    """Detects if question asks about company rules, approvals, or degree sponsorship in EN or AR."""
     q_lower = question.lower()
-    policy_terms = ["approval", "sponsor", "mba", "policy", "study leave", "carry over", "rollover"]
-    coaching_terms = ["which", "what should i learn", "what to study", "what training", "ما الدورات"]
+    policy_terms = [
+        "approval", "sponsor", "mba", "policy", "study leave", "carry over", "rollover",
+        "موافقة", "اعتماد", "ماجستير", "رعاية", "تمويل", "سياسة", "لائحة", "إجازة دراسية", "ترحيل"
+    ]
+    coaching_terms = [
+        "which", "what should i learn", "what to study", "what training",
+        "ما الدورات", "ماذا أدرس", "ماذا أتعلم", "اقترح", "ترشح"
+    ]
     return any(p in q_lower for p in policy_terms) and not any(c in q_lower for c in coaching_terms)
