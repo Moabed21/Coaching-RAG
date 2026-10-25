@@ -7,6 +7,7 @@ from helpers import (
 )
 from chunking import get_all_files_by_ex
 import re
+import pandas as pd
 import frontmatter
 
 def enrich_skill_with_taxonomy(skill_id: str) -> dict:
@@ -114,6 +115,38 @@ def get_skill_gaps(employee_info: dict) -> dict:
         "future_goal_gaps": enriched_future
     }
 
+def get_recommended_courses_context(courses: list) -> list[dict]:
+    """Enriches a list of course IDs with title, level, cost and target skills from the catalog."""
+    
+    # get courses catagol and skills taxomony and iterate over the courses
+    recommended_courses_context = []
+    catalog = db['catalog']
+    taxonomy = db['taxonomy']
+    for course_id in courses:
+        match = catalog[catalog["course_id"] == course_id]
+        if not match.empty:
+            row = match.iloc[0]
+            # Resolve skill IDs to human-readable names
+            raw_skills = str(row["skills"]) if pd.notna(row["skills"]) else ""
+            skill_ids = [s.strip() for s in raw_skills.split(";") if s.strip()]
+            skill_names = []
+            # get course id , title , level , cost and target skills 
+            for sid in skill_ids:
+                tax_match = taxonomy[taxonomy["skill_id"] == sid]
+                if not tax_match.empty:
+                    skill_names.append(tax_match.iloc[0]["name_en"])
+                else:
+                    skill_names.append(sid)
+            recommended_courses_context.append({
+                "course_id": course_id,
+                "title_en": row["title_en"],
+                "title_ar": row["title_ar"],
+                "level": row["level"],
+                "cost_qar": row["cost_qar"],
+                "target_skills": skill_names,
+            })
+    return recommended_courses_context
+
 def prepare_llm_input(employee_info: dict, question: str, rec_courses_and_overdue: dict) -> dict:
     # Assembles the full passage context dictionary for the LLM
     emp_id = employee_info["employee_id"]
@@ -135,7 +168,10 @@ def prepare_llm_input(employee_info: dict, question: str, rec_courses_and_overdu
     passage = {
         "employee_info": employee_info,
         "passage": question,
-        "rec_courses_and_overdue": rec_courses_and_overdue,
+        "rec_courses_and_overdue": {
+            "overdue_mandatory": get_recommended_courses_context(rec_courses_and_overdue.get("overdue_mandatory", [])),
+            "recommended_courses": get_recommended_courses_context(rec_courses_and_overdue.get("recommended_courses", []))
+        },
         "policy_context": rec_courses_and_overdue.get("policy_context", []),
         "career_interest": career_interest,
         "internal_jobs_interest": job_posting,
