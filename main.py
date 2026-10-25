@@ -1,4 +1,5 @@
 import logging
+import re
 import pandas as pd
 from helpers import get_employee_by_id, db
 from filters import process_request
@@ -14,10 +15,18 @@ logging.basicConfig(filename='log.log', encoding='utf-8', level=logging.INFO)
 # if cost of a course >= 3000 riyals or equal , then i must ask for manager approval
 
 def extract_target_employee(asker_id: str, question: str) -> str:
-    """Detects if another employee's name is mentioned in the prompt."""
+    """Detects if another employee's ID or name is mentioned in the prompt."""
     employees = db["employees"]
     q_lower = question.lower()
     
+    # 1. Check if another employee's ID is explicitly mentioned (e.g. E1056)
+    found_ids = re.findall(r"\bE\d{3,5}\b", question, re.IGNORECASE)
+    for eid in found_ids:
+        eid_upper = eid.upper()
+        if eid_upper in employees["employee_id"].values and eid_upper != asker_id:
+            return eid_upper
+
+    # 2. Check if another employee's name is mentioned
     for _, row in employees.iterrows():
         name_en = str(row["full_name_en"]).strip().lower() if pd.notna(row["full_name_en"]) else ""
         name_ar = str(row["full_name_ar"]).strip() if pd.notna(row["full_name_ar"]) else ""
