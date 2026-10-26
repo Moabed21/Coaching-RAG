@@ -3,10 +3,10 @@ import re
 import pandas as pd
 from helpers import get_employee_by_id, db
 from filters import process_request
+import os
 
 logger = logging.getLogger(__name__)
 logging.basicConfig(filename='log.log', encoding='utf-8', level=logging.INFO)
-
 
 # to filter mandatory and optional courses, after filtering i must validate the taken courses to check if any retirements or 
 # course expiry or any other action based on the question, after all that i must implement llm api to answer the question
@@ -63,8 +63,9 @@ def get_employee_id_and_question(asker_id: str, question: str):
         )
 
     # 3. Authorized -> process request for target_id
-    logger.info(f"REQUEST | Asker: {asker_id} | Target: {target_id} | Status: SUCCESS")
-    return process_request(target_id, question)
+    answer = process_request(target_id, question)
+    logger.info(f"REQUEST | Asker: {asker_id} | Question: {question} | Target: {target_id} |Answer: {answer} | Model: {os.getenv("MODEL_NAME")} | Status: SUCCESS")
+    return answer
 
 
 def verify_employee_id(id: str) -> bool:
