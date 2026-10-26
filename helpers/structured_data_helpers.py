@@ -49,24 +49,27 @@ def get_intersets_by_employee(employee_id:str) -> dict:
             return row
     return None
 
-# AI created
+# 
 def get_employee_goals_and_overdue(emp_id: str) -> dict:
     emp = get_employee_by_id(emp_id)
     now = pd.Timestamp("2026-10-16")
         
-    # 1. Career interest from reviews & postings
+    # 1. Career interest from reviews & postings.
     rev = db["reviews"]
     rev_match = rev[rev["employee_id"] == emp_id]
     career_interest = rev_match.iloc[0]["career_interest"] if not rev_match.empty else ""
-    
+    # 2. Get employee's posting title
     inter = get_intersets_by_employee(emp_id)
     post_title = ""
     if inter is not None:
         p_row = db["postings"][db["postings"]["posting_id"] == inter["posting_id"]]
         if not p_row.empty:
             post_title = p_row.iloc[0]["title"]
-    # 2. Overdue mandatory courses
+            
+    # 3. get courses completed by the target employee.
     emp_comp = db["completions"][db["completions"]["employee_id"] == emp_id]
+
+    # 4. Overdue courses
     overdue = []
     for _, r in db["mandatory"].iterrows():
         cid, scope, applies, months = r["course_id"], r["scope_type"], r["applies_to"], r["renewal_months"]

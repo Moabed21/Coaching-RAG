@@ -8,7 +8,7 @@ from .input_prep import (
     get_skill_gaps,
     prepare_llm_input,
 )
-from .llm_caller import call_llm
+from .llm_caller import call_llm, few_shot_caller
 
 def llm_processing_pipeline(employee_info: dict, question: str, rec_courses_and_overdue: dict):
     # 1. Prepare structured context payload
@@ -16,14 +16,13 @@ def llm_processing_pipeline(employee_info: dict, question: str, rec_courses_and_
 
     # 2. Format messages for the LLM
     system_prompt = """You are an expert Learning Coach Agent for Al Dana Group.
+    The system has already selected the courses, costs, approval notes, and sources below. Do NOT change, add, or remove any course, cost, title, or approval note.
     Follow these rules strictly:
-    1. If the question asks for course recommendations: Recommend ONLY the courses provided in 'recommended_courses' (typically 2 to 5 courses; NEVER invent or recommend any course outside this list). List overdue mandatory courses first, then role gaps, then career growth.
-    2. For each course, provide a 1-line 'why' citing the exact source file (e.g. [lms/course_pages/LD-118.md]).
-    3. If a course costs 3,000 QAR or more, explicitly note: 'Requires line manager and HR approval'.
-    4. Conclude course recommendations with 2 to 3 coaching questions and 1 concrete next-best action.
-    5. If the question is about policies, rules, approvals, or budgets: Answer accurately using the provided 'policy_context' and cite [policy/learning_and_development_policy.pdf].
-    6. If the user asks something not covered in the documents (such as sponsoring an MBA or degree programme), explicitly say: "I couldn't find that in the documents. Please contact the HR Learning & Development desk at learndesk@aldana-group.example." Do not recommend any courses or coaching questions.
-    7. Answer in the same language as the question (Arabic or English)."""
+    1. Reproduce every course line from 'course_recommendation_lines' exactly as written (title, cost, source, approval note). Do NOT invent or recommend any course outside this list.
+    2. After each course line, add exactly one sentence explaining WHY this course is relevant to the employee's role, skill gaps, or career goals.
+    3. Conclude with 2 to 3 coaching questions and 1 concrete next-best action.
+    4. If the question is about policies, rules, approvals, budgets, or learning hours: Answer accurately using the provided 'policy_context' and 'learning_hours' data, and cite [policy/learning_and_development_policy.pdf].
+    5. Answer in the same language as the question (Arabic or English)."""
 
     user_prompt = f"Employee Question: {question}\nContext Information:\n{passage}"
 
