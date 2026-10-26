@@ -29,7 +29,7 @@ from embeddings import embedder_retriever, retrieve_policy
 from helpers.structured_data_helpers import get_employee_goals_and_overdue
 from agent import llm_processing_pipeline
 
-# AI assisted
+# Optimized it
 def process_request(id: str, question: str):
 
     # 1. Overdue mandatory
@@ -37,12 +37,13 @@ def process_request(id: str, question: str):
     excluded = get_all_excluded_courses(id)
 
     # Retrieve policy chunks ONLY if this is a policy question
-    if is_policy_question(question):
+    option = is_policy_question(question)
+    if (option == 1):
         policy_docs = retrieve_policy(question, top_k = 2)
         policy_snippets = [doc.page_content for doc in policy_docs]
         final_picks = []
         overdue_picks = []
-    else:
+    elif(option == 2):
         # 2. Enrich search query and retrieve courses
         enriched_query = f"{question} {ego['career_interest']} {ego['posting_title']}".strip()
         results = embedder_retriever(enriched_query, top_k = 10)
@@ -62,6 +63,8 @@ def process_request(id: str, question: str):
         # Overdue mandatory first, then budget-approved optional courses
         final_picks = ego["overdue"] + budget_approved_optional
         overdue_picks = ego["overdue"]
+    else: # general
+        return "I couldn't find that in the documents. Please contact the HR Learning & Development desk at learndesk@aldana-group.example."
 
     return (llm_processing_pipeline(
         get_employee_by_id(id),

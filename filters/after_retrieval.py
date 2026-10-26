@@ -1,5 +1,23 @@
 from helpers.structured_data_helpers import get_employee_by_id, db
 from .before_retrieval import get_remaining_budget
+from agent import few_shot_caller
+
+CLASSIFICATION_EXAMPLES = [
+    {"role": "user", "content": "What courses should I take to grow in maintenance?"},
+    {"role": "assistant", "content": "coaching"},
+    {"role": "user", "content": "I still have some training budget left this year. What's the best use of it?"},
+    {"role": "assistant", "content": "coaching"},
+    {"role": "user", "content": "Do I need approval for a 4000 QAR course?"},
+    {"role": "assistant", "content": "policy"},
+    {"role": "user", "content": "هل الشركة ترعى دراسة الماجستير؟"},
+    {"role": "assistant", "content": "general"},
+    {"role": "user", "content": "Will the company sponsor me to do an MBA?"},
+    {"role": "assistant", "content": "general"},
+    {"role": "user", "content": "ما الدورات المناسبة لتطوير مهاراتي؟"},
+    {"role": "assistant", "content": "coaching"},
+    {"role": "user", "content": "I joined recently. What should I focus on this quarter?"},
+    {"role": "assistant", "content": "coaching"},
+]
 
 def validate_allowed_grade_courses(employee_id: str, recommended_courses: list[str]) -> list[str]:
     """
@@ -69,13 +87,15 @@ def filter_by_cumulative_budget(employee_id: str, candidate_courses: list[str], 
 # for handling cases where policy is relevant to the question(New Feature)
 def is_policy_question(question: str) -> bool:
     """Detects if question asks about company rules, approvals, or degree sponsorship in EN or AR."""
-    q_lower = question.lower()
-    policy_terms = [
-        "approval", "sponsor", "mba", "policy", "study leave", "carry over", "rollover",
-        "موافقة", "اعتماد", "ماجستير", "رعاية", "تمويل", "سياسة", "لائحة", "إجازة دراسية", "ترحيل"
-    ]
-    coaching_terms = [
-        "which", "what should i learn", "what to study", "what training",
-        "ما الدورات", "ماذا أدرس", "ماذا أتعلم", "اقترح", "ترشح"
-    ]
-    return any(p in q_lower for p in policy_terms) and not any(c in q_lower for c in coaching_terms)
+
+    # new implementation
+    full_passage = CLASSIFICATION_EXAMPLES + [{"role" : "user", "content" : question}]
+    result = few_shot_caller(full_passage)
+
+    res_clean = result.strip().lower()
+    if "general" in res_clean:
+        return 3
+    elif "policy" in res_clean:
+        return 1
+    else: # coaching
+        return 2
