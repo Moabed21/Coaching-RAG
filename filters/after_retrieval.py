@@ -17,6 +17,10 @@ CLASSIFICATION_EXAMPLES = [
     {"role": "assistant", "content": "coaching"},
     {"role": "user", "content": "I joined recently. What should I focus on this quarter?"},
     {"role": "assistant", "content": "coaching"},
+    {"role": "user", "content": "how many learning hours do I need this year, and how many have I done?"},
+    {"role": "assistant", "content": "policy"},
+    {"role": "user", "content": "Can I book flights and hotel in Bahrain for training?"},
+    {"role": "assistant", "content": "general"},
 ]
 
 def validate_allowed_grade_courses(employee_id: str, recommended_courses: list[str]) -> list[str]:

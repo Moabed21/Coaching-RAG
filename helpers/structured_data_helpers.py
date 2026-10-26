@@ -41,8 +41,6 @@ def get_optional_courses():
     
     return optional_courses
 
-
-
 # this function prevets mutli interesets error
 def get_intersets_by_employee(employee_id:str) -> dict:
     interests = db['interest']
@@ -85,3 +83,16 @@ def get_employee_goals_and_overdue(emp_id: str) -> dict:
                     overdue.append(cid)
                     
     return {"career_interest": career_interest, "posting_title": post_title, "overdue": overdue}
+
+def get_completed_hours_2026(emp_id: str) -> int:
+    """Calculates total learning hours completed in calendar year 2026 by summing duration_hours from the catalog."""
+    completions = db["completions"]
+    catalog = db["catalog"]
+    emp_comp = completions[completions["employee_id"] == emp_id]
+    if emp_comp.empty:
+        return 0
+    emp_2026 = emp_comp[emp_comp["completed_on"].astype(str).str.startswith("2026")]
+    if emp_2026.empty:
+        return 0
+    merged = emp_2026.merge(catalog, on="course_id", how="inner")
+    return int(merged["duration_hours"].astype(int).sum())
