@@ -27,7 +27,8 @@ from .after_retrieval import (
 )
 from embeddings import embedder_retriever, retrieve_policy
 from helpers.structured_data_helpers import get_employee_goals_and_overdue
-from agent import llm_processing_pipeline
+from agent import llm_processing_pipeline, get_skill_gaps
+import re
 
 # Optimized it
 def process_request(id: str, question: str):
@@ -44,9 +45,20 @@ def process_request(id: str, question: str):
         final_picks = []
         overdue_picks = []
     elif(option == 2):
+
+        emp = get_employee_by_id(id)
+        gaps_dict = get_skill_gaps(emp)
+        curr_gaps = [g["skill_id"] for g in gaps_dict.get("current_role_gaps", [])]
+        fut_gaps = [g["skill_id"] for g in gaps_dict.get("future_goal_gaps", [])]
+        all_gaps = set(curr_gaps + fut_gaps)
+
+        # Skill gap names for search query enrichment
+        gap_names = [g["name_en"] for g in gaps_dict.get("current_role_gaps", []) + gaps_dict.get("future_goal_gaps", [])]
+        gap_str = " ".join(gap_names)
+
         # 2. Enrich search query and retrieve courses
-        enriched_query = f"{question} {ego['career_interest']} {ego['posting_title']}".strip()
-        results = embedder_retriever(enriched_query, top_k = 10)
+        enriched_query = f"{question} {ego['career_interest']} {ego['posting_title']} {gap_str}".strip()
+        results = embedder_retriever(enriched_query, top_k = 25)
         candidates = [doc.metadata["course_id"] for doc in results if doc.metadata.get("course_id")]
         policy_snippets = []
         
@@ -55,10 +67,34 @@ def process_request(id: str, question: str):
         
         # Deduplicate candidates and exclude already picked overdue courses
         optional_candidates = [c for c in dict.fromkeys(valid_courses) if c not in ego["overdue"]]
-        
-        # 4. Cap cumulative optional courses within remaining budget
-        max_optional = 5 - len(ego["overdue"])
-        budget_approved_optional = filter_by_cumulative_budget(id, optional_candidates, max_courses=max_optional)
+
+        # Prioritize courses that target the employee's skill gaps or career goal
+        catalog = db["catalog"]
+        skills_map = dict(zip(catalog["course_id"], catalog["skills"]))
+
+        career_lower = str(ego["career_interest"]).lower()
+        wants_leadership = any(w in career_lower for w in ["lead", "manage", "supervisor", "crew", "head"])
+        leadership_courses = {"LD-121", "LD-122", "LD-123"}
+
+        gap_matches = []
+        goal_matches = []
+        other_matches = []
+
+        for cid in optional_candidates:
+            c_skills = set(re.split(r"[,;]\s*", str(skills_map.get(cid, ""))))
+            if all_gaps.intersection(c_skills):
+                gap_matches.append(cid)
+            elif wants_leadership and cid in leadership_courses:
+                goal_matches.append(cid)
+            else:
+                other_matches.append(cid)
+
+        # Rank: gap-matching first, then career goal matches, then others if needed
+        ranked_candidates = gap_matches + goal_matches + (other_matches if len(gap_matches) + len(goal_matches) < 2 else [])
+
+        # 4. Cap cumulative optional courses (2-3 good courses, total with overdue <= 5)
+        max_optional = min(3, max(2, 5 - len(ego["overdue"])))
+        budget_approved_optional = filter_by_cumulative_budget(id, ranked_candidates, max_courses=max_optional)
         
         # Overdue mandatory first, then budget-approved optional courses
         final_picks = ego["overdue"] + budget_approved_optional

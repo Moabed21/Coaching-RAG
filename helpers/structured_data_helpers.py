@@ -49,7 +49,6 @@ def get_intersets_by_employee(employee_id:str) -> dict:
             return row
     return None
 
-# 
 def get_employee_goals_and_overdue(emp_id: str) -> dict:
     emp = get_employee_by_id(emp_id)
     now = pd.Timestamp("2026-10-16")
