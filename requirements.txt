@@ -1,0 +1,12 @@
+pandas
+python-frontmatter
+pymupdf
+openai
+python-dotenv
+chromadb
+langchain
+langchain-core
+langchain-community
+langchain-chroma
+langchain-ollama
+rank-bm25
