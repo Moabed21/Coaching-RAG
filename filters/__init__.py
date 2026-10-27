@@ -58,7 +58,7 @@ def process_request(id: str, question: str):
 
         # 2. Enrich search query and retrieve courses
         enriched_query = f"{question} {ego['career_interest']} {ego['posting_title']} {gap_str}".strip()
-        results = embedder_retriever(enriched_query, top_k = 25)
+        results = embedder_retriever(enriched_query, top_k = 10)
         candidates = [doc.metadata["course_id"] for doc in results if doc.metadata.get("course_id")]
         policy_snippets = []
         
